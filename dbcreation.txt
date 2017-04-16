@@ -18,3 +18,12 @@ createdb --owner=john mydb
  sudo systemctl restart postgresql
  
 psql -h localhost -U john mydb
+
+CREATE TABLE messages (
+    ts          date  ,
+    id       varchar(12) NOT NULL,
+    oppid    varchar(12) NOT NULL,
+    status    varchar(1) NOT NULL,
+    message    varchar(300),
+    other      varchar(300)
+);
