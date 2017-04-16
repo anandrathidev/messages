@@ -19,8 +19,9 @@ createdb --owner=john mydb
  
 psql -h localhost -U john mydb
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS  messages (
     ts          date  ,
+    ots          date  ,
     id       varchar(12) NOT NULL,
     oppid    varchar(12) NOT NULL,
     status    varchar(1) NOT NULL,
