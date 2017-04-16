@@ -5,17 +5,24 @@ from wsgiref import simple_server
 
 import falcon
 import requests
-
+import MessLogger
+import MessConnections
+from sqlalchemy.sql import text
 
 class StorageEngine(object):
-
+    def __init__(self,logger):
+        self.dbcon = MessConnections.MessConnections()
+        self.insertStm = self.dbcon.
+        self.logger = logger
+        self.statement = text("""INSERT INTO book(ts, ots, id, oppid, status, message,  other) VALUES(:ts, :ots,:id, :oppid, :status, :message,  :other)""") 
     def get_things(self, marker, limit):
         return [{'id': str(uuid.uuid4()), 'color': 'green'}]
 
-    def add_thing(self, thing):
-        thing['id'] = str(uuid.uuid4())
-        return thing
-
+    def add_thing(self, ts, ots, id, oppid, status, message,  other):
+        try: 
+            self.dbcon.execute(self.statement, ts, ots, id, oppid, status, message, other)
+        except BaseException as e:
+            self.logger.exception(e)
 
 class StorageError(Exception):
 
@@ -140,10 +147,9 @@ def max_body(limit):
 
 class Messages(object):
 
-    def __init__(self, db):
-        #self.db = db
-        self.logger = logging.getLogger('messagesapp.' + __name__)
-
+    def __init__(self, db, logger):
+        self.db = db
+        self.logger = logger
     def on_get(self, req, resp, user_id):
         marker = req.get_param('marker') or ''
         limit = req.get_param_as_int('limit') or 50
@@ -177,6 +183,7 @@ class Messages(object):
         try:
             doc = req.context['doc']
             print("user_id={0} doc={1}".format(user_id, doc))
+            self.db.add_thing(ts = date.date.now(), ots=doc['ts'], id=doc['id'], oppid=doc['oppid'], status=doc['status'], message=doc['message'], other=doc['other])
         except KeyError:
             raise falcon.HTTPBadRequest(
                 'Missing thing',
@@ -195,7 +202,8 @@ app = falcon.API(middleware=[
 ])
 
 db = StorageEngine()
-things = Messages(db)
+logger = MessLogger()
+things = Messages(db,logger)
 app.add_route('/{user_id}/messages', things)
 
 # If a responder ever raised an instance of StorageError, pass control to
