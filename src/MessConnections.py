@@ -1,7 +1,7 @@
 import MagicStrings
 import MessLogger
-import MessConfigManager as CONF
-
+import MessConfigManager
+from sqlalchemy import create_engine
 import os
 
 class MessConnections: 
@@ -15,7 +15,7 @@ class MessConnections:
     host = self.conf.getConfDict()["CONFIGsql"]["host"]
     port = self.conf.getConfDict()["CONFIGsql"]["port"]
     pw = self.conf.getConfDict()["CONFIGsql"]["password"]
-    dbname = self.conf.getConfDict()["CONFIG_mysql"]["dbname"]
+    dbname = self.conf.getConfDict()["CONFIGsql"]["dbname"]
     url = 'postgresql://{}:{}@{}:{}/{}'
     url = url.format(user, pw, host, port,dbname)
     engine = create_engine(url)

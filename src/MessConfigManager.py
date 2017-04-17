@@ -1,9 +1,9 @@
-# Read configuration file from /config as json
+# Read configuration file from config 
 
 import json
 import MagicStrings
 
-class MessConfigMgr:
+class MessConfigManager:
   def __init__(self):
     self.gconf = None
     try:

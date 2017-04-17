@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 from wsgiref import simple_server
-
+import datetime
 import falcon
 import requests
 import MessLogger
@@ -11,18 +11,32 @@ from sqlalchemy.sql import text
 
 class StorageEngine(object):
     def __init__(self,logger):
-        self.dbcon = MessConnections.MessConnections()
-        self.insertStm = self.dbcon.
+        self.messConnections = MessConnections.MessConnections()
+        self.dbcon = self.messConnections.sqlConnect()
         self.logger = logger
-        self.statement = text("""INSERT INTO book(ts, ots, id, oppid, status, message,  other) VALUES(:ts, :ots,:id, :oppid, :status, :message,  :other)""") 
+        try: 
+            self.statement = text("""INSERT INTO messages(ts, ots, id, oppid, status, message,  other) VALUES(:ts, :ots,:id, :oppid, :status, :message,  :other)""") 
+        except BaseException as e:
+            self.logger.exception(e)
+            raise e
     def get_things(self, marker, limit):
         return [{'id': str(uuid.uuid4()), 'color': 'green'}]
 
-    def add_thing(self, ts, ots, id, oppid, status, message,  other):
+    def addthingO(self, ts, ots, id, oppid, status, message,  other):
         try: 
+            self.logger.info("insert {}, {}, {}, {}, {}, {}, {}".format(ts, ots, id, oppid, status, message, other) )
+            print("insert {}, {}, {}, {}, {}, {}, {}".format(ts, ots, id, oppid, status, message, other))
             self.dbcon.execute(self.statement, ts, ots, id, oppid, status, message, other)
         except BaseException as e:
             self.logger.exception(e)
+            raise e
+    def addthing(self, doc):
+        try: 
+            #self.logger.info("insert {}, {}, {}, {}, {}, {}, {}".format(**doc) )
+            self.dbcon.execute(self.statement, **doc)
+        except BaseException as e:
+            self.logger.exception(e)
+            raise e
 
 class StorageError(Exception):
 
@@ -116,7 +130,7 @@ class JSONTranslator(object):
 
         try:
             req.context['doc'] = json.loads(body.decode('utf-8'))
-            print("message={0}".format(req.context['doc']))
+            #print("message={0}".format(req.context['doc']))
         except (ValueError, UnicodeDecodeError):
             raise falcon.HTTPError(falcon.HTTP_753,
                                    'Malformed JSON',
@@ -182,12 +196,24 @@ class Messages(object):
     def on_post(self, req, resp, user_id):
         try:
             doc = req.context['doc']
-            print("user_id={0} doc={1}".format(user_id, doc))
-            self.db.add_thing(ts = date.date.now(), ots=doc['ts'], id=doc['id'], oppid=doc['oppid'], status=doc['status'], message=doc['message'], other=doc['other])
-        except KeyError:
+            import pdb
+            #pdb.set_trace()
+            doc["ots"] = datetime.datetime.now() 
+            self.db.addthing(doc)
+        except KeyError as ex:
+            print(str(ex))
+            self.logger.error(ex)
             raise falcon.HTTPBadRequest(
                 'Missing thing',
                 'A thing must be submitted in the request body.')
+        except Exception as ex:
+            print(str(ex))
+            self.logger.error(ex)
+            raise ex
+        except BaseException as ex:
+            print(str(ex))
+            self.logger.error(ex)
+            raise ex
 
         resp.status = falcon.HTTP_201
         #resp.location = '/%s/things/%s' % (user_id, proper_thing['id'])
@@ -201,8 +227,8 @@ app = falcon.API(middleware=[
     JSONTranslator(),
 ])
 
-db = StorageEngine()
-logger = MessLogger()
+logger = MessLogger.GetLogger()
+db = StorageEngine(logger)
 things = Messages(db,logger)
 app.add_route('/{user_id}/messages', things)
 

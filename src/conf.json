@@ -1,0 +1,5 @@
+{
+ "LOGLEVEL" : "INFO",
+ "CONFIGsql" : { "host" : "127.0.0.1", "port" : 5432,  "username" : "messages" , "password" : "messages123" , "dbname" : "messagesdb"}  
+}
+
